@@ -208,6 +208,11 @@ async function run(): Promise<void> {
       console.log(`🔍 Анализирую [${order.offersCount} предл.]: ${order.title}`);
       const ai = await analyzeOrder(order.title, order.desc);
 
+      if (ai.reason === 'ошибка анализа') {
+        console.log(`🔄 Ошибка AI — пропускаю кэш, повторю в следующем запуске: ${order.title}`);
+        continue; // ← не добавляем в кэш, попробуем снова
+      }
+
       if (ai.score >= 7) {
         await sendTelegram(order, ai);
         console.log(`✅ Отправлено в Telegram (score: ${ai.score}): ${order.title}`);
@@ -216,7 +221,7 @@ async function run(): Promise<void> {
         console.log(`⏭️  Пропущен (score: ${ai.score}): ${order.title}`);
       }
 
-      processedIds.push(order.id);
+      processedIds.push(order.id); // ← добавляем только если AI отработала
 
       // Пауза чтобы не спамить OpenRouter
       await new Promise(r => setTimeout(r, 15000));
