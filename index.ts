@@ -10,6 +10,7 @@ import fs from 'fs';
 const CACHE_FILE = 'processed_ids.json';
 const STOP_WORDS = ['отзыв', 'реферат', 'диплом', 'курсовая', 'перевод', 'копирайт', 'текст'];
 const MIN_PRICE = 1000;
+const MAX_OFFERS = 10;
 
 // --- Загрузка кэша обработанных ID ---
 function loadCache(): string[] {
@@ -39,8 +40,8 @@ function isTrash(title: string, desc: string, priceStr: string): boolean {
 
 // --- Анализ заказа через OPENROUTER ---
 const FREE_MODELS = [
-  'openrouter/free',               // 🏆 авто-роутер — всегда актуален
-  'nvidia/nemotron-3-super:free',  // fallback #1 — Programming #4
+  'openrouter/free',              // 🏆 авто-роутер — всегда актуален
+  'nvidia/nemotron-3-super:free', // fallback #1 — Programming #4
   'stepfun/step-3.5-flash:free',  // fallback #2 — быстрый
 ];
 
@@ -105,11 +106,12 @@ async function sendTelegram(order: {
   title: string;
   price: string;
   link: string;
+  offersCount: number;
 }, ai: { score: number; reason: string; pitch: string }): Promise<void> {
 
   const msg =
     `🔥 *${order.title}*\n` +
-    `💰 ${order.price}\n` +
+    `💰 ${order.price} | 📨 Предложений: ${order.offersCount}\n` +
     `⭐ Оценка: ${ai.score}/10\n\n` +
     `🧠 *Почему брать:*\n${ai.reason}\n\n` +
     `📝 *Готовый отклик:*\n${ai.pitch}\n\n` +
@@ -162,21 +164,37 @@ async function run(): Promise<void> {
       cards.map(c => {
         const link = (c.querySelector('a') as HTMLAnchorElement)?.href || '';
         const idMatch = link.match(/\/projects\/(\d+)/);
+
+        // Парсим количество предложений
+        const mr8els = c.querySelectorAll('.mr8');
+        let offersCount = 999;
+        mr8els.forEach((el: any) => {
+          const t = el.textContent.trim();
+          if (t.includes('Предложений')) {
+            const match = t.match(/\d+/);
+            if (match) offersCount = parseInt(match[0]);
+          }
+        });
+
         return {
           id: idMatch ? idMatch[1] : '',
           title: c.querySelector('.wants-card__header-title a')?.textContent?.trim() || '',
           desc: c.querySelector('.wants-card__description-text')?.textContent?.trim() || '',
           price: c.querySelector('.wants-card__price-wrap')?.textContent?.trim() || '',
           link,
+          offersCount,
         };
       }).filter(o => o.id !== '')
     );
-    console.log(`📋 Найдено заказов: ${orders.length}`);
+
+    // Фильтр по количеству предложений
+    const filtered = orders.filter(o => o.offersCount <= MAX_OFFERS);
+    console.log(`📋 Найдено заказов: ${orders.length}, после фильтра (≤${MAX_OFFERS} предложений): ${filtered.length}`);
 
     let newCount = 0;
     let sentCount = 0;
 
-    for (const order of orders) {
+    for (const order of filtered) {
       if (!order.id || processedIds.includes(order.id)) continue;
 
       newCount++;
@@ -187,7 +205,7 @@ async function run(): Promise<void> {
         continue;
       }
 
-      console.log(`🔍 Анализирую: ${order.title}`);
+      console.log(`🔍 Анализирую [${order.offersCount} предл.]: ${order.title}`);
       const ai = await analyzeOrder(order.title, order.desc);
 
       if (ai.score >= 7) {
