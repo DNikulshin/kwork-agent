@@ -25,7 +25,8 @@ const STATUS_LABEL: Record<string, string> = {
 export function OrderCard({ order }: { order: Order }) {
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
-  const stars = '⭐'.repeat(Math.min(Math.round(order.score / 2), 5));
+  const score = typeof order.score === 'number' ? order.score : 0;
+  const stars = '⭐'.repeat(Math.min(Math.round(score / 2), 5));
 
   async function handleStatus(status: 'applied' | 'skipped' | 'new') {
     setPending(true);
@@ -55,7 +56,7 @@ export function OrderCard({ order }: { order: Order }) {
             <span>·</span>
             <span>💰 {order.price || 'Договорная'}</span>
             <span>·</span>
-            <span>📊 {order.offers_count} откликов</span>
+            <span>📊 {typeof order.offers_count === 'number' ? order.offers_count : 0} откликов</span>
             <span>·</span>
             <span>{new Date(order.created_at).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
           </div>

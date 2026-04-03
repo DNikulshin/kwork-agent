@@ -10,19 +10,7 @@ export default function manifest(): MetadataRoute.Manifest {
     orientation: 'portrait',
     background_color: '#030712',
     theme_color: '#030712',
-    icons: [
-      {
-        src: '/icons/icon-192.png',
-        sizes: '192x192',
-        type: 'image/png',
-        purpose: 'maskable',
-      },
-      {
-        src: '/icons/icon-512.png',
-        sizes: '512x512',
-        type: 'image/png',
-        purpose: 'any',
-      },
-    ],
+    // Иконки временно убраны — добавьте PNG в public/icons/
+    icons: [],
   };
 }
