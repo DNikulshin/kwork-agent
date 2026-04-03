@@ -4,6 +4,7 @@ import { getTrashReason } from './core/filter';
 import { analyzeOrder } from './core/analyzer';
 import { KworkParser, FlParser, FreelanceruParser } from './parsers';
 import { TelegramNotifier } from './notifiers/telegram';
+import { SupabaseNotifier } from './notifiers/supabase';
 import { logger } from './utils/logger';
 import type { Parser } from './types';
 
@@ -22,6 +23,7 @@ async function run(): Promise<void> {
 
   const storage = new Storage();
   const telegram = new TelegramNotifier(storage);
+  const supabase = new SupabaseNotifier();
 
   // Запуск listener для inline-кнопок (polling)
   telegram.startCallbackListener();
@@ -67,23 +69,34 @@ async function run(): Promise<void> {
           continue;
         }
 
-        // Отправляем в Telegram
         const scored = { order, score: result.score, pitch: result.pitch };
+        let sent = false;
+
         try {
           await telegram.send(scored);
+          sent = true;
           totalSent++;
         } catch (err) {
           logger.error({ err, orderId: order.id }, 'Ошибка отправки в Telegram');
         }
 
-        storage.markProcessed({
-          orderId: order.id,
-          source: order.source,
-          title: order.title,
-          score: result.score.score,
-          link: order.link,
-          pitch: `${result.pitch.hook}\n\n${result.pitch.pitch}`,
-        });
+        try {
+          await supabase.send(scored);
+        } catch (err) {
+          logger.error({ err, orderId: order.id }, 'Ошибка отправки в Supabase');
+        }
+
+        // Помечаем обработанным только если хотя бы один канал сработал
+        if (sent) {
+          storage.markProcessed({
+            orderId: order.id,
+            source: order.source,
+            title: order.title,
+            score: result.score.score,
+            link: order.link,
+            pitch: `${result.pitch.hook}\n\n${result.pitch.pitch}`,
+          });
+        }
 
         // Пауза между заказами
         await new Promise(r => setTimeout(r, config.delays.betweenOrders));

@@ -28,6 +28,12 @@ export const config = {
     timeout: 10_000,
   },
 
+  /** Supabase */
+  supabase: {
+    url: process.env.SUPABASE_URL ?? '',
+    anonKey: process.env.SUPABASE_ANON_KEY ?? '',
+  },
+
   /** Фильтрация */
   filter: {
     /** Заказы с этими словами — мусор (не IT) */
