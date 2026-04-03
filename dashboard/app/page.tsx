@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@supabase/supabase-js';
 import { OrderCard } from '@/components/OrderCard';
 import type { Order } from '@/lib/supabase';
+import dynamic from 'next/dynamic';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -14,7 +15,7 @@ const supabase = createClient(
 type FilterStatus = 'all' | 'new' | 'applied' | 'skipped';
 type FilterSource = 'all' | 'kwork' | 'fl' | 'freelanceru';
 
-export default function Page() {
+function PageComponent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -165,3 +166,5 @@ function FilterButton({
     </button>
   );
 }
+
+export default dynamic(() => Promise.resolve(PageComponent), { ssr: false });
