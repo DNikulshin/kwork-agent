@@ -7,6 +7,32 @@ const geist = Geist({ subsets: ['latin'] });
 export const metadata: Metadata = {
   title: 'ScanAgent',
   description: 'Мониторинг заказов с фриланс-бирж',
+  manifest: '/manifest',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'ScanAgent',
+  },
+  formatDetection: {
+    telephone: false,
+  },
+  openGraph: {
+    type: 'website',
+    siteName: 'ScanAgent',
+    title: 'ScanAgent',
+    description: 'Мониторинг заказов с фриланс-бирж',
+  },
+  twitter: {
+    card: 'summary',
+    title: 'ScanAgent',
+    description: 'Мониторинг заказов с фриланс-бирж',
+  },
+};
+
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
