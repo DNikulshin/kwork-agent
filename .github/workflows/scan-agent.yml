@@ -43,6 +43,8 @@ jobs:
           FL_SEARCH_URL: ${{ secrets.FL_SEARCH_URL }}
           FREELANCERU_ENABLED: ${{ secrets.FREELANCERU_ENABLED }}
           FREELANCERU_SEARCH_URL: ${{ secrets.FREELANCERU_SEARCH_URL }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
         run: npx tsx src/index.ts
 
       - name: Save DB cache
