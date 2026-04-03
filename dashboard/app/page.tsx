@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@supabase/supabase-js';
 import { OrderCard } from '@/components/OrderCard';
 import type { Order } from '@/lib/supabase';
@@ -13,39 +14,30 @@ const supabase = createClient(
 type FilterStatus = 'all' | 'new' | 'applied' | 'skipped';
 type FilterSource = 'all' | 'kwork' | 'fl' | 'freelanceru';
 
-export default function Page({
-  searchParams,
-}: {
-  searchParams: Promise<{ status?: string; source?: string; minScore?: string }>;
-}) {
+export default function Page() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
   const [orders, setOrders] = useState<any[] | null>(null);
   const [error, setError] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [status, setStatus] = useState<FilterStatus>('all');
-  const [source, setSource] = useState<FilterSource>('all');
-  const [minScore, setMinScore] = useState(0);
+
+  const status = (searchParams.get('status') ?? 'all') as FilterStatus;
+  const source = (searchParams.get('source') ?? 'all') as FilterSource;
+  const minScore = parseInt(searchParams.get('minScore') ?? '0', 10);
 
   useEffect(() => {
     async function loadData() {
       try {
-        const params = await searchParams;
-        const newStatus = (params.status ?? 'all') as FilterStatus;
-        const newSource = (params.source ?? 'all') as FilterSource;
-        const newMinScore = parseInt(params.minScore ?? '0', 10);
-
-        setStatus(newStatus);
-        setSource(newSource);
-        setMinScore(newMinScore);
-
         let query = supabase
           .from('orders')
           .select('*')
           .order('created_at', { ascending: false })
           .limit(100);
 
-        if (newStatus !== 'all') query = query.eq('status', newStatus);
-        if (newSource !== 'all') query = query.eq('source', newSource);
-        if (newMinScore > 0) query = query.gte('score', newMinScore);
+        if (status !== 'all') query = query.eq('status', status);
+        if (source !== 'all') query = query.eq('source', source);
+        if (minScore > 0) query = query.gte('score', minScore);
 
         const { data, error: err } = await query;
         setOrders(data);
@@ -58,7 +50,17 @@ export default function Page({
       }
     }
     loadData();
-  }, [searchParams]);
+  }, [status, source, minScore]);
+
+  const updateFilter = (key: string, value: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (value === 'all') {
+      params.delete(key);
+    } else {
+      params.set(key, value);
+    }
+    router.push(`?${params.toString()}`);
+  };
 
   const counts = {
     new: 0, applied: 0, skipped: 0, all: 0,
@@ -66,8 +68,8 @@ export default function Page({
   if (orders) {
     orders.forEach(o => {
       counts.all++;
-      const status = typeof o.status === 'string' && ['new', 'applied', 'skipped'].includes(o.status) ? o.status as FilterStatus : 'new';
-      counts[status]++;
+      const s = typeof o.status === 'string' && ['new', 'applied', 'skipped'].includes(o.status) ? o.status as FilterStatus : 'new';
+      counts[s]++;
     });
   }
 
@@ -88,11 +90,11 @@ export default function Page({
       </div>
 
       {/* Filters */}
-      <form className="flex flex-wrap gap-3 mb-6">
+      <div className="flex flex-wrap gap-3 mb-6">
         {/* Status tabs */}
         <div className="flex gap-1 bg-gray-900 rounded-lg p-1 border border-gray-800">
           {(['all', 'new', 'applied', 'skipped'] as FilterStatus[]).map(s => (
-            <FilterButton key={s} name="status" value={s} current={status}
+            <FilterButton key={s} value={s} current={status} onClick={() => updateFilter('status', s)}
               label={{ all: 'Все', new: 'Новые', applied: 'Откликнулся', skipped: 'Пропущены' }[s]}
             />
           ))}
@@ -101,7 +103,7 @@ export default function Page({
         {/* Source */}
         <div className="flex gap-1 bg-gray-900 rounded-lg p-1 border border-gray-800">
           {(['all', 'kwork', 'fl', 'freelanceru'] as FilterSource[]).map(s => (
-            <FilterButton key={s} name="source" value={s} current={source}
+            <FilterButton key={s} value={s} current={source} onClick={() => updateFilter('source', s)}
               label={{ all: 'Все биржи', kwork: 'Kwork', fl: 'FL.ru', freelanceru: 'Freelance.ru' }[s]}
             />
           ))}
@@ -110,12 +112,12 @@ export default function Page({
         {/* Min score */}
         <div className="flex gap-1 bg-gray-900 rounded-lg p-1 border border-gray-800">
           {[0, 7, 8, 9].map(s => (
-            <FilterButton key={s} name="minScore" value={String(s)} current={String(minScore)}
+            <FilterButton key={s} value={String(s)} current={String(minScore)} onClick={() => updateFilter('minScore', String(s))}
               label={s === 0 ? 'Все оценки' : `≥${s}⭐`}
             />
           ))}
         </div>
-      </form>
+      </div>
 
       {/* Error */}
       {error && (
@@ -145,16 +147,14 @@ export default function Page({
 }
 
 function FilterButton({
-  name, value, current, label,
+  value, current, onClick, label,
 }: {
-  name: string; value: string; current: string; label: string;
+  value: string; current: string; onClick: () => void; label: string;
 }) {
   const isActive = value === current;
   return (
     <button
-      type="submit"
-      name={name}
-      value={value}
+      onClick={onClick}
       className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
         isActive
           ? 'bg-blue-600 text-white'
