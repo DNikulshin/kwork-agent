@@ -1,3 +1,6 @@
+'use client';
+
+import { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { OrderCard } from '@/components/OrderCard';
 import type { Order } from '@/lib/supabase';
@@ -10,37 +13,52 @@ const supabase = createClient(
 type FilterStatus = 'all' | 'new' | 'applied' | 'skipped';
 type FilterSource = 'all' | 'kwork' | 'fl' | 'freelanceru';
 
-export default async function Page({
+export default function Page({
   searchParams,
 }: {
   searchParams: Promise<{ status?: string; source?: string; minScore?: string }>;
 }) {
-  const params = await searchParams;
-  const status = (params.status ?? 'all') as FilterStatus;
-  const source = (params.source ?? 'all') as FilterSource;
-  const minScore = parseInt(params.minScore ?? '0', 10);
+  const [orders, setOrders] = useState<any[] | null>(null);
+  const [error, setError] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [status, setStatus] = useState<FilterStatus>('all');
+  const [source, setSource] = useState<FilterSource>('all');
+  const [minScore, setMinScore] = useState(0);
 
-  let query = supabase
-    .from('orders')
-    .select('*')
-    .order('created_at', { ascending: false })
-    .limit(100);
+  useEffect(() => {
+    async function loadData() {
+      try {
+        const params = await searchParams;
+        const newStatus = (params.status ?? 'all') as FilterStatus;
+        const newSource = (params.source ?? 'all') as FilterSource;
+        const newMinScore = parseInt(params.minScore ?? '0', 10);
 
-  if (status !== 'all') query = query.eq('status', status);
-  if (source !== 'all') query = query.eq('source', source);
-  if (minScore > 0) query = query.gte('score', minScore);
+        setStatus(newStatus);
+        setSource(newSource);
+        setMinScore(newMinScore);
 
-  let orders: any[] | null = null;
-  let error: any = null;
+        let query = supabase
+          .from('orders')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(100);
 
-  try {
-    const { data, error: err } = await query;
-    orders = data;
-    error = err;
-  } catch (err) {
-    console.error('Error fetching orders:', err);
-    error = { message: 'Ошибка при загрузке данных' };
-  }
+        if (newStatus !== 'all') query = query.eq('status', newStatus);
+        if (newSource !== 'all') query = query.eq('source', newSource);
+        if (newMinScore > 0) query = query.gte('score', newMinScore);
+
+        const { data, error: err } = await query;
+        setOrders(data);
+        setError(err);
+      } catch (err) {
+        console.error('Error fetching orders:', err);
+        setError({ message: 'Ошибка при загрузке данных' });
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadData();
+  }, [searchParams]);
 
   const counts = {
     new: 0, applied: 0, skipped: 0, all: 0,
@@ -51,6 +69,14 @@ export default async function Page({
       const status = typeof o.status === 'string' && ['new', 'applied', 'skipped'].includes(o.status) ? o.status as FilterStatus : 'new';
       counts[status]++;
     });
+  }
+
+  if (loading) {
+    return (
+      <div className="max-w-3xl mx-auto px-4 py-8">
+        <div className="text-center text-gray-400">Загрузка...</div>
+      </div>
+    );
   }
 
   return (
