@@ -30,7 +30,17 @@ export default async function Page({
   if (source !== 'all') query = query.eq('source', source);
   if (minScore > 0) query = query.gte('score', minScore);
 
-  const { data: orders, error } = await query;
+  let orders: any[] | null = null;
+  let error: any = null;
+
+  try {
+    const { data, error: err } = await query;
+    orders = data;
+    error = err;
+  } catch (err) {
+    console.error('Error fetching orders:', err);
+    error = { message: 'Ошибка при загрузке данных' };
+  }
 
   const counts = {
     new: 0, applied: 0, skipped: 0, all: 0,
@@ -101,7 +111,7 @@ export default async function Page({
           <p className="text-gray-500 text-center py-16">Заказов не найдено</p>
         )}
         {orders?.map(order => (
-          <OrderCard key={order.id} order={order as Order} />
+          <OrderCard key={typeof order.id === 'string' ? order.id : Math.random()} order={order as Order} />
         ))}
       </div>
     </div>
