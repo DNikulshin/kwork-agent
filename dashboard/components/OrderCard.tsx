@@ -23,10 +23,11 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 export function OrderCard({ order }: { order: Order }) {
-  const [open, setOpen] = useState(false);
-  const [pending, setPending] = useState(false);
-  const score = typeof order.score === 'number' ? order.score : 0;
-  const stars = '⭐'.repeat(Math.min(Math.round(score / 2), 5));
+  try {
+    const [open, setOpen] = useState(false);
+    const [pending, setPending] = useState(false);
+    const score = typeof order.score === 'number' ? order.score : 0;
+    const stars = '⭐'.repeat(Math.min(Math.round(score / 2), 5));
 
   async function handleStatus(status: 'applied' | 'skipped' | 'new') {
     setPending(true);
@@ -131,4 +132,12 @@ export function OrderCard({ order }: { order: Order }) {
       )}
     </div>
   );
+  } catch (err) {
+    console.error('Error rendering OrderCard:', err, order);
+    return (
+      <div className="rounded-xl border p-5 border-gray-800 bg-gray-900 text-red-400">
+        Ошибка отображения заказа
+      </div>
+    );
+  }
 }

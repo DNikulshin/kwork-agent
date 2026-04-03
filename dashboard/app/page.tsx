@@ -38,7 +38,8 @@ export default async function Page({
   if (orders) {
     orders.forEach(o => {
       counts.all++;
-      counts[o.status as FilterStatus]++;
+      const status = typeof o.status === 'string' && ['new', 'applied', 'skipped'].includes(o.status) ? o.status as FilterStatus : 'new';
+      counts[status]++;
     });
   }
 
@@ -83,7 +84,7 @@ export default async function Page({
       {/* Error */}
       {error && (
         <div className="rounded-lg bg-red-900/30 border border-red-800 p-4 text-red-400 mb-6 text-sm">
-          Ошибка загрузки: {error.message}
+          Ошибка загрузки: {typeof error.message === 'string' ? error.message : 'Неизвестная ошибка'}
         </div>
       )}
 
