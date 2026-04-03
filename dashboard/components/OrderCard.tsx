@@ -69,7 +69,9 @@ export function OrderCard({ order }: { order: Order }) {
       </div>
 
       {/* Reason */}
-      <p className="text-sm text-gray-400 leading-relaxed">{order.reason}</p>
+      <p className="text-sm text-gray-400 leading-relaxed">
+        {typeof order.reason === 'string' ? order.reason : 'Причина не доступна'}
+      </p>
 
       {/* Pitch toggle */}
       <button
@@ -81,8 +83,10 @@ export function OrderCard({ order }: { order: Order }) {
 
       {open && (
         <div className="rounded-lg bg-gray-800 p-4 text-sm text-gray-200 leading-relaxed whitespace-pre-wrap select-all cursor-copy border border-gray-700">
-          <p className="italic text-gray-400 mb-2">{order.hook}</p>
-          {order.pitch}
+          <p className="italic text-gray-400 mb-2">
+            {typeof order.hook === 'string' ? order.hook : 'Hook не доступен'}
+          </p>
+          {typeof order.pitch === 'string' ? order.pitch : 'Pitch не доступен'}
         </div>
       )}
 
