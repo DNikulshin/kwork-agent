@@ -140,13 +140,18 @@ function PageComponent() {
         </select>
 
         {/* Min score */}
-        <input
-          type="number"
-          placeholder="Мин. score"
-          value={minScore || ''}
-          onChange={e => updateFilter('minScore', e.target.value)}
-          className="px-3 py-1.5 text-sm bg-gray-900 border border-gray-800 rounded-md text-white w-24"
-        />
+        <select
+          value={minScore || '0'}
+          onChange={e => updateFilter('minScore', e.target.value === '0' ? 'all' : e.target.value)}
+          className="px-3 py-1.5 text-sm bg-gray-900 border border-gray-800 rounded-md text-white"
+        >
+          <option value="0">Любой score</option>
+          <option value="5">≥ 5</option>
+          <option value="6">≥ 6</option>
+          <option value="7">≥ 7</option>
+          <option value="8">≥ 8</option>
+          <option value="9">≥ 9</option>
+        </select>
       </div>
 
       {/* Orders */}
