@@ -25,8 +25,10 @@ async function run(): Promise<void> {
   validateConfig();
 
   const storage = new Storage();
-  const telegram = new TelegramNotifier(storage);
   const supabase = new SupabaseNotifier();
+  const telegram = new TelegramNotifier(storage, (orderId, source, hook, pitch) =>
+    supabase.updatePitch(orderId, source, hook, pitch)
+  );
   const push = new PushNotifier();
 
   // Запуск listener для inline-кнопок (polling)
@@ -74,7 +76,7 @@ async function run(): Promise<void> {
           continue;
         }
 
-        const scored = { order, score: result.score, pitch: result.pitch, tags: extractTags(order) };
+        const scored = { order, score: result.score, pitch: result.pitch, pitchB: result.pitchB, tags: extractTags(order) };
         let sent = false;
 
         try {
@@ -107,6 +109,7 @@ async function run(): Promise<void> {
             score: result.score.score,
             link: order.link,
             pitch: `${result.pitch.hook}\n\n${result.pitch.pitch}`,
+            pitchB: result.pitchB ? JSON.stringify(result.pitchB) : undefined,
             tags: scored.tags,
           });
         }

@@ -28,6 +28,7 @@ export interface ScoredOrder {
   order: Order;
   score: ScoreResult;
   pitch: PitchResult;
+  pitchB?: PitchResult | null;
   tags?: string[];
 }
 

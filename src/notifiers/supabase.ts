@@ -47,4 +47,15 @@ export class SupabaseNotifier implements Notifier {
 
     logger.info({ orderId: order.id, source: order.source }, 'Сохранено в Supabase');
   }
+
+  async updatePitch(orderId: string, source: string, hook: string, pitch: string): Promise<void> {
+    if (!this.client) return;
+    const { error } = await this.client
+      .from('orders')
+      .update({ hook, pitch })
+      .eq('order_id', orderId)
+      .eq('source', source);
+    if (error) throw new Error(error.message);
+    logger.info({ orderId, source }, 'Питч обновлён в Supabase (вариант B)');
+  }
 }

@@ -135,7 +135,7 @@ ${SCORING_EXAMPLES}
 
 // ── Шаг 2: Pitch (платная модель, только для высокого score) ──
 
-export async function generatePitch(order: Order): Promise<PitchResult | null> {
+export async function generatePitch(order: Order, temperature?: number): Promise<PitchResult | null> {
   const profileCtx = getProfileContext();
 
   const prompt = `Ты пишешь отклик на заказ с фриланс-биржи от имени разработчика.
@@ -165,7 +165,7 @@ ${profileCtx}
       () => callOpenRouter({
         model: config.openrouter.pitchModel,
         prompt,
-        temperature: config.openrouter.pitchTemperature,
+        temperature: temperature ?? config.openrouter.pitchTemperature,
         maxTokens: 600,
       }),
       {
@@ -187,6 +187,7 @@ ${profileCtx}
 export interface AnalysisResult {
   score: ScoreResult;
   pitch: PitchResult;
+  pitchB: PitchResult | null;
 }
 
 export async function analyzeOrder(order: Order, minScore?: number): Promise<AnalysisResult | null> {
@@ -205,14 +206,18 @@ export async function analyzeOrder(order: Order, minScore?: number): Promise<Ana
 
   logger.info({ orderId: order.id, score: score.score, title: order.title }, 'Прошёл скоринг');
 
-  const pitch = await generatePitch(order);
+  // Генерируем 2 варианта параллельно: сфокусированный (0.5) и креативный (0.9)
+  const [pitch, pitchB] = await Promise.all([
+    generatePitch(order, 0.5),
+    generatePitch(order, 0.9),
+  ]);
 
   if (!pitch) {
     logger.warn({ orderId: order.id }, 'Ошибка pitch — повторю позже');
     return null;
   }
 
-  return { score, pitch };
+  return { score, pitch, pitchB };
 }
 
 

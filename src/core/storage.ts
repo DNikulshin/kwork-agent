@@ -78,14 +78,15 @@ export class Storage {
     score: number;
     link: string;
     pitch?: string;
+    pitchB?: string;
     tags?: string[];
   }): void {
     this.db
       .prepare(
-        `INSERT OR REPLACE INTO orders (order_id, source, title, score, link, pitch, tags, processed_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
+        `INSERT OR REPLACE INTO orders (order_id, source, title, score, link, pitch, pitch_b, tags, processed_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
       )
-      .run(params.orderId, params.source, params.title, params.score, params.link, params.pitch ?? '', (params.tags ?? []).join(','));
+      .run(params.orderId, params.source, params.title, params.score, params.link, params.pitch ?? '', params.pitchB ?? '', (params.tags ?? []).join(','));
   }
 
   /** Возвращает сохранённый питч для заказа */
@@ -137,6 +138,33 @@ export class Storage {
       .prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)')
       .run(key, value);
     logger.info({ key, value }, 'Настройка обновлена');
+  }
+
+  /**
+   * Помечает выбранный вариант питча как основной.
+   * Возвращает hook и pitch выбранного варианта (для обновления Supabase),
+   * или null если данные не найдены / выбран вариант A (уже в Supabase).
+   */
+  choosePitch(orderId: string, source: string, variant: 'a' | 'b'): { hook: string; pitch: string } | null {
+    if (variant === 'a') return null; // вариант A уже сохранён в Supabase при первичной отправке
+
+    const row = this.db
+      .prepare('SELECT pitch_b FROM orders WHERE order_id = ? AND source = ?')
+      .get(orderId, source) as { pitch_b: string } | undefined;
+
+    if (!row?.pitch_b) return null;
+
+    try {
+      const parsed = JSON.parse(row.pitch_b) as { hook: string; pitch: string };
+      // Обновляем основной pitch в SQLite
+      this.db
+        .prepare(`UPDATE orders SET pitch = ? WHERE order_id = ? AND source = ?`)
+        .run(`${parsed.hook}\n\n${parsed.pitch}`, orderId, source);
+      logger.info({ orderId, source }, 'Выбран вариант B');
+      return parsed;
+    } catch {
+      return null;
+    }
   }
 
   /** Заказы, которым нужно отправить напоминание */
@@ -216,6 +244,7 @@ export class Storage {
       `ALTER TABLE orders ADD COLUMN pitch TEXT DEFAULT ''`,
       `ALTER TABLE orders ADD COLUMN reminded_at TEXT DEFAULT NULL`,
       `ALTER TABLE orders ADD COLUMN tags TEXT DEFAULT ''`,
+      `ALTER TABLE orders ADD COLUMN pitch_b TEXT DEFAULT ''`,
     ]) {
       try { this.db.exec(sql); } catch { /* колонка уже есть */ }
     }

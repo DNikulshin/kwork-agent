@@ -11,20 +11,25 @@ const SOURCE_LABEL: Record<string, string> = {
   habr: 'Habr',
 };
 
+type PitchChoosenCallback = (orderId: string, source: string, hook: string, pitch: string) => Promise<void>;
+
 export class TelegramNotifier implements Notifier {
   name = 'telegram';
   private bot: TelegramBot;
   private storage: Storage | null;
+  private onPitchChosen: PitchChoosenCallback | null;
 
-  constructor(storage?: Storage) {
+  constructor(storage?: Storage, onPitchChosen?: PitchChoosenCallback) {
     this.bot = new TelegramBot(config.telegram.botToken, { polling: false });
     this.storage = storage ?? null;
+    this.onPitchChosen = onPitchChosen ?? null;
   }
 
   async send(scored: ScoredOrder): Promise<void> {
     const { order, score, pitch } = scored;
     const source = SOURCE_LABEL[order.source] ?? order.source;
     const stars = '⭐'.repeat(Math.min(Math.round(score.score / 2), 5));
+    const hasPitchB = !!scored.pitchB;
 
     const lines = [
       `🔥 <b>${esc(order.title)}</b>`,
@@ -36,24 +41,35 @@ export class TelegramNotifier implements Notifier {
       `🧠 <b>Почему брать:</b>`,
       esc(score.reason),
       ``,
-      `✍️ <b>Готовый отклик</b> <i>(тап — скопировать):</i>`,
+      `✍️ <b>Вариант 1</b> <i>(тап — скопировать):</i>`,
       `<code>${esc(pitch.hook)}\n\n${esc(pitch.pitch)}</code>`,
-      ``,
-      `🔗 <a href="${order.link}">${esc(order.title)}</a>`,
     ];
 
+    if (hasPitchB) {
+      lines.push(
+        ``,
+        `✍️ <b>Вариант 2</b>`,
+        `<code>${esc(scored.pitchB!.hook)}\n\n${esc(scored.pitchB!.pitch)}</code>`,
+      );
+    }
+
+    lines.push(``, `🔗 <a href="${order.link}">${esc(order.title)}</a>`);
+
     const callbackSkip = `skip:${order.source}:${order.id}`;
+    const keyboard = hasPitchB
+      ? [
+          [
+            { text: '✅ Вариант 1', callback_data: `pick1:${order.source}:${order.id}` },
+            { text: '✅ Вариант 2', callback_data: `pick2:${order.source}:${order.id}` },
+          ],
+          [{ text: '⏭ Пропустить', callback_data: callbackSkip }],
+        ]
+      : [[{ text: '⏭ Пропустить', callback_data: callbackSkip }]];
 
     await this.bot.sendMessage(config.telegram.chatId, lines.join('\n'), {
       parse_mode: 'HTML',
       link_preview_options: { is_disabled: true },
-      reply_markup: {
-        inline_keyboard: [
-          [
-            { text: '⏭ Пропустить', callback_data: callbackSkip },
-          ],
-        ],
-      },
+      reply_markup: { inline_keyboard: keyboard },
     });
 
     logger.info(
@@ -183,6 +199,29 @@ export class TelegramNotifier implements Notifier {
           await this.bot.answerCallbackQuery(query.id, { text: '❌ Ошибка' }).catch(() => {});
         }
 
+      } else if (action === 'pick1' || action === 'pick2') {
+        try {
+          const variant = action === 'pick1' ? 'a' : 'b';
+          const chosen = this.storage!.choosePitch(orderId, source, variant);
+
+          // Если выбран вариант B — обновляем Supabase
+          if (chosen && this.onPitchChosen) {
+            await this.onPitchChosen(orderId, source, chosen.hook, chosen.pitch).catch(() => {});
+          }
+
+          const label = action === 'pick1' ? 'Вариант 1' : 'Вариант 2';
+          await this.bot.answerCallbackQuery(query.id, { text: `✅ Выбран ${label}` });
+
+          if (query.message) {
+            await this.bot.editMessageReplyMarkup(
+              { inline_keyboard: [[{ text: `✅ Выбран ${label}`, callback_data: 'noop' }]] },
+              { chat_id: query.message.chat.id, message_id: query.message.message_id },
+            ).catch(() => {});
+          }
+        } catch (err) {
+          logger.error({ err, orderId, source, action }, 'Ошибка обработки pick');
+          await this.bot.answerCallbackQuery(query.id, { text: '❌ Ошибка' }).catch(() => {});
+        }
       }
     });
 
