@@ -8,7 +8,7 @@ export interface Order {
   price: string;
   link: string;
   offersCount: number;
-  source: 'kwork' | 'fl' | 'freelanceru'; // расширяется при добавлении бирж
+  source: 'kwork' | 'fl' | 'freelanceru' | 'habr';
 }
 
 /** Результат AI-скоринга */

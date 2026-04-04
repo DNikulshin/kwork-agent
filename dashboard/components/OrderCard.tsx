@@ -7,6 +7,7 @@ const SOURCE_EMOJI: Record<string, string> = {
   kwork: '🟠',
   fl: '🔵',
   freelanceru: '🟢',
+  habr: '🟣',
 };
 
 const STATUS_STYLES: Record<string, string> = {

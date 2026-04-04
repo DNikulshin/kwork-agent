@@ -43,6 +43,8 @@ jobs:
           FL_SEARCH_URL: ${{ secrets.FL_SEARCH_URL }}
           FREELANCERU_ENABLED: ${{ secrets.FREELANCERU_ENABLED }}
           FREELANCERU_SEARCH_URL: ${{ secrets.FREELANCERU_SEARCH_URL }}
+          HABR_ENABLED: ${{ secrets.HABR_ENABLED }}
+          HABR_SEARCH_URL: ${{ secrets.HABR_SEARCH_URL }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
           VAPID_PUBLIC_KEY: ${{ secrets.VAPID_PUBLIC_KEY }}

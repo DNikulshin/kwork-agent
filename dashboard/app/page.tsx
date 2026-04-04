@@ -14,7 +14,7 @@ const supabase = createClient(
 );
 
 type FilterStatus = 'all' | 'new' | 'applied' | 'skipped';
-type FilterSource = 'all' | 'kwork' | 'fl' | 'freelanceru';
+type FilterSource = 'all' | 'kwork' | 'fl' | 'freelanceru' | 'habr';
 
 function PageComponent() {
   const router = useRouter();
@@ -165,6 +165,7 @@ function PageComponent() {
           <option value="kwork">Kwork</option>
           <option value="fl">FL.ru</option>
           <option value="freelanceru">Freelance.ru</option>
+          <option value="habr">Habr</option>
         </select>
 
         {/* Min score */}

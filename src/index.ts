@@ -3,7 +3,7 @@ import { Storage } from './core/storage';
 import { getTrashReason } from './core/filter';
 import { analyzeOrder } from './core/analyzer';
 import { extractTags } from './core/tagger';
-import { KworkParser, FlParser, FreelanceruParser } from './parsers';
+import { KworkParser, FlParser, FreelanceruParser, HabrParser } from './parsers';
 import { TelegramNotifier } from './notifiers/telegram';
 import { SupabaseNotifier } from './notifiers/supabase';
 import { PushNotifier } from './notifiers/push';
@@ -16,6 +16,7 @@ const parsers: Parser[] = [
   new KworkParser(),
   new FlParser(),
   new FreelanceruParser(),
+  new HabrParser(),
 ];
 
 // ── Главная функция ──

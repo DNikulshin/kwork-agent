@@ -110,6 +110,19 @@ export const config = {
     },
   },
 
+  /** Habr Freelance */
+  habr: {
+    enabled: process.env.HABR_ENABLED === 'true',
+    url: process.env.HABR_SEARCH_URL ?? 'https://freelance.habr.com/tasks?categories=develop_programming,develop_javascript,develop_python,develop_mobile&type=all',
+    selectors: {
+      card: '.task',
+      title: '.task__title a',
+      description: '.task__description, .preview__text',
+      price: '.task__price, .price-box__money',
+      offersText: '.count-responses, .task__responses-count',
+    },
+  },
+
   /** Push notifications */
   push: {
     vapid: {

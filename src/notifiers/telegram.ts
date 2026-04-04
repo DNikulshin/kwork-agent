@@ -8,6 +8,7 @@ const SOURCE_LABEL: Record<string, string> = {
   kwork: 'Kwork',
   fl: 'FL.ru',
   freelanceru: 'Freelance.ru',
+  habr: 'Habr',
 };
 
 export class TelegramNotifier implements Notifier {
