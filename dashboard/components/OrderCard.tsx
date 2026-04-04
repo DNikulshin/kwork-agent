@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { updateStatus } from '@/app/actions';
 import type { Order } from '@/lib/supabase';
 
 const SOURCE_EMOJI: Record<string, string> = {
@@ -22,7 +21,7 @@ const STATUS_LABEL: Record<string, string> = {
   skipped: 'Пропущен',
 };
 
-export function OrderCard({ order }: { order: Order }) {
+export function OrderCard({ order, onStatusUpdate }: { order: Order; onStatusUpdate?: (id: string, status: 'applied' | 'skipped' | 'new') => void }) {
   try {
     const [open, setOpen] = useState(false);
     const [pending, setPending] = useState(false);
@@ -31,7 +30,12 @@ export function OrderCard({ order }: { order: Order }) {
 
   async function handleStatus(status: 'applied' | 'skipped' | 'new') {
     setPending(true);
-    await updateStatus(order.id, status);
+    if (onStatusUpdate) {
+      onStatusUpdate(order.id, status);
+    } else {
+      // Fallback to old method if not provided
+      await updateStatus(order.id, status);
+    }
     setPending(false);
   }
 

@@ -2,6 +2,8 @@ import type { Metadata } from 'next';
 import { Geist } from 'next/font/google';
 import './globals.css';
 import { PushNotificationManager } from '@/components/PushNotificationManager';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { useState } from 'react';
 
 const geist = Geist({ subsets: ['latin'] });
 
@@ -37,10 +39,15 @@ export const viewport = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  const [queryClient] = useState(() => new QueryClient());
+
   return (
     <html lang="ru">
       <body className={`${geist.className} bg-gray-950 text-gray-100 min-h-screen`}>
-        {children}
+        <QueryClientProvider client={queryClient}>
+          <PushNotificationManager />
+          {children}
+        </QueryClientProvider>
       </body>
     </html>
   );
