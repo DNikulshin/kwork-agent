@@ -9,7 +9,8 @@
     "outDir": "./dist",
     "rootDir": "./src",
     "skipLibCheck": true,
-    "types": ["node"]
+    "types": ["node"],
+    "ignoreDeprecations": "6.0"
   },
   "include": ["src/**/*.ts"]
 }
