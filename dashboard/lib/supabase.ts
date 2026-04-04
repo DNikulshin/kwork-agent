@@ -17,6 +17,8 @@ export interface Order {
   pitch: string;
   tags: string;
   status: OrderStatus;
+  applied_at: string | null;
+  outcome: 'pending' | 'won' | 'lost';
   created_at: string;
 }
 

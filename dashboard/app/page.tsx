@@ -52,15 +52,21 @@ function PageComponent() {
 
   const updateStatusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: 'applied' | 'skipped' | 'new' }) => {
-      const { error } = await supabase
-        .from('orders')
-        .update({ status })
-        .eq('id', id);
+      const update: Record<string, unknown> = { status };
+      if (status === 'applied') update.applied_at = new Date().toISOString();
+      if (status !== 'applied') update.applied_at = null;
+      const { error } = await supabase.from('orders').update(update).eq('id', id);
       if (error) throw error;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['orders'] });
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['orders'] }),
+  });
+
+  const updateOutcomeMutation = useMutation({
+    mutationFn: async ({ id, outcome }: { id: string; outcome: 'won' | 'lost' | 'pending' }) => {
+      const { error } = await supabase.from('orders').update({ outcome }).eq('id', id);
+      if (error) throw error;
     },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['orders'] }),
   });
 
   const updateFilter = (key: string, value: string) => {
@@ -119,6 +125,23 @@ function PageComponent() {
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-white mb-1">🔍 ScanAgent</h1>
         <p className="text-gray-400 text-sm">Заказы с фриланс-бирж · обновляется каждые 30 мин</p>
+        {(() => {
+          const applied = orders?.filter(o => o.status === 'applied') ?? [];
+          if (applied.length === 0) return null;
+          const won  = applied.filter(o => o.outcome === 'won').length;
+          const lost = applied.filter(o => o.outcome === 'lost').length;
+          const winRate = won + lost > 0 ? Math.round((won / (won + lost)) * 100) : null;
+          return (
+            <div className="mt-3 flex flex-wrap gap-3 text-sm">
+              <span className="text-gray-400">📨 Откликов: <b className="text-white">{applied.length}</b></span>
+              <span className="text-green-400">🏆 Выиграно: <b>{won}</b></span>
+              <span className="text-red-400">❌ Проиграно: <b>{lost}</b></span>
+              {winRate !== null && (
+                <span className="text-yellow-400">📈 Win rate: <b>{winRate}%</b></span>
+              )}
+            </div>
+          );
+        })()}
       </div>
 
       {/* Filters */}
@@ -214,7 +237,12 @@ function PageComponent() {
             {expandedSections.applied && (
               <div className="space-y-4">
                 {groupedOrders.applied.map(order => (
-                  <OrderCard key={order.id} order={order} onStatusUpdate={(id, status) => updateStatusMutation.mutate({ id, status })} />
+                  <OrderCard
+                    key={order.id}
+                    order={order}
+                    onStatusUpdate={(id, status) => updateStatusMutation.mutate({ id, status })}
+                    onOutcomeUpdate={(id, outcome) => updateOutcomeMutation.mutate({ id, outcome })}
+                  />
                 ))}
               </div>
             )}

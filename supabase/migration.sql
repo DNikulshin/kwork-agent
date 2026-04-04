@@ -31,6 +31,10 @@ CREATE TABLE IF NOT EXISTS push_subscriptions (
 -- Колонка тегов (технологии: React, Node.js, Python и т.д.)
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS tags TEXT DEFAULT '';
 
+-- История откликов
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS applied_at TIMESTAMPTZ;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS outcome TEXT DEFAULT 'pending'; -- pending | won | lost
+
 -- Индексы для быстрой фильтрации в дашборде
 CREATE INDEX IF NOT EXISTS idx_orders_status     ON orders(status);
 CREATE INDEX IF NOT EXISTS idx_orders_score      ON orders(score DESC);

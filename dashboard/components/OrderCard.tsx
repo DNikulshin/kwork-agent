@@ -21,7 +21,11 @@ const STATUS_LABEL: Record<string, string> = {
   skipped: 'Пропущен',
 };
 
-export function OrderCard({ order, onStatusUpdate }: { order: Order; onStatusUpdate?: (id: string, status: 'applied' | 'skipped' | 'new') => void }) {
+export function OrderCard({ order, onStatusUpdate, onOutcomeUpdate }: {
+  order: Order;
+  onStatusUpdate?: (id: string, status: 'applied' | 'skipped' | 'new') => void;
+  onOutcomeUpdate?: (id: string, outcome: 'won' | 'lost' | 'pending') => void;
+}) {
   try {
     const [open, setOpen] = useState(false);
     const [pending, setPending] = useState(false);
@@ -115,7 +119,7 @@ export function OrderCard({ order, onStatusUpdate }: { order: Order; onStatusUpd
 
       {/* Actions */}
       {!isSkipped && (
-        <div className="flex gap-2 pt-1">
+        <div className="flex gap-2 pt-1 flex-wrap">
           {order.status !== 'applied' && (
             <button
               onClick={() => handleStatus('applied')}
@@ -142,6 +146,41 @@ export function OrderCard({ order, onStatusUpdate }: { order: Order; onStatusUpd
             >
               ↩ Сбросить
             </button>
+          )}
+        </div>
+      )}
+
+      {/* Outcome (только для откликнувшихся) */}
+      {order.status === 'applied' && onOutcomeUpdate && (
+        <div className="border-t border-gray-800 pt-3">
+          {order.outcome === 'won' && (
+            <div className="flex items-center gap-2">
+              <span className="text-green-400 font-medium text-sm">🏆 Выиграно</span>
+              <button onClick={() => onOutcomeUpdate(order.id, 'pending')} className="text-xs text-gray-600 hover:text-gray-400 transition-colors">сбросить</button>
+            </div>
+          )}
+          {order.outcome === 'lost' && (
+            <div className="flex items-center gap-2">
+              <span className="text-red-400 font-medium text-sm">❌ Проиграно</span>
+              <button onClick={() => onOutcomeUpdate(order.id, 'pending')} className="text-xs text-gray-600 hover:text-gray-400 transition-colors">сбросить</button>
+            </div>
+          )}
+          {(!order.outcome || order.outcome === 'pending') && (
+            <div className="flex items-center gap-2">
+              <span className="text-gray-500 text-xs">Результат:</span>
+              <button
+                onClick={() => onOutcomeUpdate(order.id, 'won')}
+                className="text-sm px-3 py-1 rounded-lg bg-green-900/50 text-green-400 hover:bg-green-800/50 border border-green-800/50 transition-colors"
+              >
+                🏆 Выиграл
+              </button>
+              <button
+                onClick={() => onOutcomeUpdate(order.id, 'lost')}
+                className="text-sm px-3 py-1 rounded-lg bg-red-900/30 text-red-400 hover:bg-red-800/40 border border-red-800/30 transition-colors"
+              >
+                ❌ Проиграл
+              </button>
+            </div>
           )}
         </div>
       )}
