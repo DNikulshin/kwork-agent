@@ -40,13 +40,20 @@ export function PushNotificationManager() {
         });
 
         // Отправить subscription в Supabase
-        await supabase.from('push_subscriptions').upsert({
-          endpoint: subscription.endpoint,
-          p256dh: arrayBufferToBase64(subscription.getKey('p256dh')!),
-          auth: arrayBufferToBase64(subscription.getKey('auth')!),
-        });
-
-        console.log('Push subscription saved');
+        try {
+          const { error } = await supabase.from('push_subscriptions').upsert({
+            endpoint: subscription.endpoint,
+            p256dh: arrayBufferToBase64(subscription.getKey('p256dh')!),
+            auth: arrayBufferToBase64(subscription.getKey('auth')!),
+          });
+          if (error) {
+            console.error('Error saving push subscription:', error);
+          } else {
+            console.log('Push subscription saved successfully');
+          }
+        } catch (err) {
+          console.error('Exception saving push subscription:', err);
+        }
       }
     }
   };

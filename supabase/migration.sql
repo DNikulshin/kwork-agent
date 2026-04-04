@@ -36,3 +36,4 @@ CREATE INDEX IF NOT EXISTS idx_orders_source     ON orders(source);
 
 -- Row Level Security (отключаем — доступ через service_role key в агенте)
 ALTER TABLE orders DISABLE ROW LEVEL SECURITY;
+ALTER TABLE push_subscriptions DISABLE ROW LEVEL SECURITY;
