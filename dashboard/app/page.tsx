@@ -145,7 +145,7 @@ function PageComponent() {
           onChange={e => updateFilter('minScore', e.target.value === '0' ? 'all' : e.target.value)}
           className="px-3 py-1.5 text-sm bg-gray-900 border border-gray-800 rounded-md text-white"
         >
-          <option value="0">Любой score</option>
+          <option value="0">Любой балл</option>
           <option value="5">≥ 5</option>
           <option value="6">≥ 6</option>
           <option value="7">≥ 7</option>
