@@ -33,7 +33,8 @@ async function run(): Promise<void> {
   // Очистка записей старше 30 дней
   storage.cleanup(30);
 
-  logger.info('Запуск агента');
+  const settings = storage.getSettings();
+  logger.info({ settings }, 'Запуск агента');
   let totalNew = 0;
   let totalSent = 0;
 
@@ -46,7 +47,7 @@ async function run(): Promise<void> {
 
         totalNew++;
 
-        const trashReason = getTrashReason(order);
+        const trashReason = getTrashReason(order, settings);
         if (trashReason) {
           logger.debug({ orderId: order.id, parser: parser.name, reason: trashReason }, 'Мусор');
           storage.markProcessed({
@@ -64,7 +65,7 @@ async function run(): Promise<void> {
           `Анализирую: ${order.title}`,
         );
 
-        const result = await analyzeOrder(order);
+        const result = await analyzeOrder(order, settings.minScore);
 
         if (!result) {
           // null = ошибка AI → НЕ сохраняем, повторим в следующем запуске

@@ -1,7 +1,7 @@
 import TelegramBot from 'node-telegram-bot-api';
 import { config } from '../config';
 import { logger } from '../utils/logger';
-import type { Storage, ReminderOrder, StatsResult } from '../core/storage';
+import type { Storage, ReminderOrder, StatsResult, DynamicSettings } from '../core/storage';
 import type { ScoredOrder, Notifier } from '../types';
 
 const SOURCE_LABEL: Record<string, string> = {
@@ -97,12 +97,62 @@ export class TelegramNotifier implements Notifier {
     this.bot.startPolling({ restart: true });
 
     this.bot.on('message', async (msg) => {
-      if (msg.text !== '/stats' || !this.storage) return;
+      if (!this.storage) return;
+      const text = msg.text?.trim() ?? '';
+      if (!text.startsWith('/')) return;
+
       try {
-        const stats = this.storage.getStats(config.filter.minScore);
-        await this.bot.sendMessage(config.telegram.chatId, formatStats(stats), { parse_mode: 'HTML' });
+        const storage = this.storage;
+
+        if (text === '/stats') {
+          const settings = storage.getSettings();
+          const stats = storage.getStats(settings.minScore);
+          await this.bot.sendMessage(config.telegram.chatId, formatStats(stats), { parse_mode: 'HTML' });
+
+        } else if (text === '/settings') {
+          const settings = storage.getSettings();
+          await this.bot.sendMessage(config.telegram.chatId, formatSettings(settings), { parse_mode: 'HTML' });
+
+        } else if (text.startsWith('/setrate ')) {
+          const val = parseInt(text.slice(9).trim(), 10);
+          if (isNaN(val) || val < 0) throw new Error('Неверное значение. Пример: /setrate 2000');
+          storage.setSetting('minPrice', String(val));
+          await this.bot.sendMessage(config.telegram.chatId, `✅ Мин. бюджет: <b>${val}₽</b>`, { parse_mode: 'HTML' });
+
+        } else if (text.startsWith('/setscore ')) {
+          const val = parseInt(text.slice(10).trim(), 10);
+          if (isNaN(val) || val < 0 || val > 10) throw new Error('Неверное значение (0–10). Пример: /setscore 7');
+          storage.setSetting('minScore', String(val));
+          await this.bot.sendMessage(config.telegram.chatId, `✅ Мин. балл: <b>${val}/10</b>`, { parse_mode: 'HTML' });
+
+        } else if (text === '/setstop list') {
+          const { stopWords } = storage.getSettings();
+          const list = stopWords.map((w, i) => `${i + 1}. ${esc(w)}`).join('\n');
+          await this.bot.sendMessage(config.telegram.chatId, `🚫 <b>Стоп-слова:</b>\n${list || '(список пуст)'}`, { parse_mode: 'HTML' });
+
+        } else if (text.startsWith('/setstop add ')) {
+          const word = text.slice(13).trim().toLowerCase();
+          if (!word) throw new Error('Укажите слово. Пример: /setstop add реферат');
+          const settings = storage.getSettings();
+          if (!settings.stopWords.includes(word)) {
+            settings.stopWords.push(word);
+            storage.setSetting('stopWords', JSON.stringify(settings.stopWords));
+          }
+          await this.bot.sendMessage(config.telegram.chatId, `✅ Стоп-слово добавлено: <b>${esc(word)}</b>`, { parse_mode: 'HTML' });
+
+        } else if (text.startsWith('/setstop remove ')) {
+          const word = text.slice(16).trim().toLowerCase();
+          if (!word) throw new Error('Укажите слово. Пример: /setstop remove реферат');
+          const settings = storage.getSettings();
+          settings.stopWords = settings.stopWords.filter(w => w !== word);
+          storage.setSetting('stopWords', JSON.stringify(settings.stopWords));
+          await this.bot.sendMessage(config.telegram.chatId, `✅ Стоп-слово удалено: <b>${esc(word)}</b>`, { parse_mode: 'HTML' });
+        }
+
       } catch (err) {
-        logger.error({ err }, 'Ошибка отправки статистики');
+        const errMsg = err instanceof Error ? err.message : 'Неизвестная ошибка';
+        await this.bot.sendMessage(config.telegram.chatId, `❌ ${esc(errMsg)}`).catch(() => {});
+        logger.error({ err, text }, 'Ошибка обработки команды');
       }
     });
 
@@ -141,6 +191,22 @@ export class TelegramNotifier implements Notifier {
   stopCallbackListener(): void {
     this.bot.stopPolling();
   }
+}
+
+function formatSettings(s: DynamicSettings): string {
+  return [
+    `⚙️ <b>Настройки агента</b>`,
+    ``,
+    `💰 Мин. бюджет: <b>${s.minPrice}₽</b>`,
+    `⭐ Мин. балл: <b>${s.minScore}/10</b>`,
+    `🔢 Макс. предложений: <b>${s.maxOffers}</b>`,
+    `🚫 Стоп-слов: <b>${s.stopWords.length}</b>`,
+    ``,
+    `<i>Команды:</i>`,
+    `/setrate &lt;сумма&gt;`,
+    `/setscore &lt;0-10&gt;`,
+    `/setstop list | add &lt;слово&gt; | remove &lt;слово&gt;`,
+  ].join('\n');
 }
 
 function formatStats(s: StatsResult): string {

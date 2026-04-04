@@ -189,7 +189,7 @@ export interface AnalysisResult {
   pitch: PitchResult;
 }
 
-export async function analyzeOrder(order: Order): Promise<AnalysisResult | null> {
+export async function analyzeOrder(order: Order, minScore?: number): Promise<AnalysisResult | null> {
   const score = await scoreOrder(order);
 
   if (!score) {
@@ -197,7 +197,8 @@ export async function analyzeOrder(order: Order): Promise<AnalysisResult | null>
     return null;
   }
 
-  if (score.score < config.filter.minScore) {
+  const threshold = minScore ?? config.filter.minScore;
+  if (score.score < threshold) {
     logger.info({ orderId: order.id, score: score.score, reason: score.reason }, 'Не прошёл порог');
     return null;
   }

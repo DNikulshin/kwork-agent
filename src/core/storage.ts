@@ -1,7 +1,15 @@
 import Database from 'better-sqlite3';
 import path from 'path';
 
+import { config } from '../config';
 import { logger } from '../utils/logger';
+
+export interface DynamicSettings {
+  minPrice: number;
+  minScore: number;
+  maxOffers: number;
+  stopWords: string[];
+}
 
 export interface ReminderOrder {
   order_id: string;
@@ -108,6 +116,28 @@ export class Storage {
     logger.info({ orderId, source }, 'Заказ добавлен в blacklist');
   }
 
+  /** Загружает динамические настройки, дефолты — из config */
+  getSettings(): DynamicSettings {
+    const rows = this.db
+      .prepare('SELECT key, value FROM settings')
+      .all() as { key: string; value: string }[];
+    const map = Object.fromEntries(rows.map(r => [r.key, r.value]));
+    return {
+      minPrice:  map['minPrice']  ? parseInt(map['minPrice'], 10)  : config.filter.minPrice,
+      minScore:  map['minScore']  ? parseInt(map['minScore'], 10)  : config.filter.minScore,
+      maxOffers: map['maxOffers'] ? parseInt(map['maxOffers'], 10) : config.filter.maxOffers,
+      stopWords: map['stopWords'] ? JSON.parse(map['stopWords'])   : [...config.filter.stopWords],
+    };
+  }
+
+  /** Сохраняет одну настройку */
+  setSetting(key: string, value: string): void {
+    this.db
+      .prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)')
+      .run(key, value);
+    logger.info({ key, value }, 'Настройка обновлена');
+  }
+
   /** Заказы, которым нужно отправить напоминание */
   getUnremindedOrders(minScore: number, afterHours: number = 2): ReminderOrder[] {
     const interval = `-${afterHours} hours`;
@@ -187,5 +217,12 @@ export class Storage {
     ]) {
       try { this.db.exec(sql); } catch { /* колонка уже есть */ }
     }
+
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS settings (
+        key   TEXT PRIMARY KEY,
+        value TEXT NOT NULL
+      );
+    `);
   }
 }
